@@ -1,0 +1,26 @@
+{
+ "v": "codec-anchor",
+ "ts": "2026-08-25T19:58:38Z",
+ "items": [
+  {
+   "id": "T-beacon-drive",
+   "tensor_hash": "f4b707d6f402f62180e6222b72d44bd58b5d2174cf57e071ffc5f8a200719a05",
+   "push": 201
+  },
+  {
+   "id": "T-quota-meter",
+   "tensor_hash": "3ee81881abe019426f6f51939130de0911d3826a4ea04e3bd8a52bbfdd43f8a6",
+   "push": 201
+  },
+  {
+   "id": "T-onboard",
+   "tensor_hash": "825139ab9b07d9694c9ffe9d9791fee3d6ad00e1800c8b72e7999a63d79c0295",
+   "push": 201
+  },
+  {
+   "id": "T-restore-adjudicate",
+   "tensor_hash": "6f0e6eaad5149868a6fbb87a525d1e707d113479cc466f9a1f3a16f264a58615",
+   "push": 201
+  }
+ ]
+}
