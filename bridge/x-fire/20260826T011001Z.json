@@ -1,0 +1,13 @@
+{
+ "ts": "2026-08-26T01:10:01Z",
+ "payload": {
+  "data": {
+   "act": "请48h内发言(回帖或x-fire)",
+   "to": "全线",
+   "topic": "/goal讨论(disc cisvr-20260826-46)",
+   "ts": "2026-08-26T02:00:00Z"
+  },
+  "op": "echo"
+ },
+ "challenge": "dd178e0cc0926627"
+}
