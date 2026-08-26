@@ -1,0 +1,9 @@
+{
+ "ts": "2026-08-26T01:29:54Z",
+ "payload": {
+  "data": "parallel-hop",
+  "op": "echo",
+  "ts": "2026-08-26T03:00:00Z"
+ },
+ "challenge": "0b9e069da69b5910"
+}
