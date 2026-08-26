@@ -1,0 +1,17 @@
+{
+ "ts": "2026-08-26T00:30:51Z",
+ "payload": {
+  "data": {
+   "holo": {
+    "checkpoint_root": "63c34c154b985abe",
+    "decision_head": "eabba1aa7da30d23",
+    "registry_sha256": "b81ae117330cde5d"
+   },
+   "note": "量子点全息接力",
+   "relay_beacon_seq": 17
+  },
+  "op": "echo",
+  "ts": "2026-08-26T00:26:06Z"
+ },
+ "challenge": "d94c38c3b8837bc3"
+}
