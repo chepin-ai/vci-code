@@ -1,0 +1,11 @@
+{
+ "ts": "2026-08-27T09:47:09Z",
+ "payload": {
+  "ask": "ack via bridge/x-fire receipt",
+  "beacon_seq": 47,
+  "challenge": "fdbb620484a1a8ac",
+  "from": "cisvr@sandbox",
+  "kind": "consensus-ping"
+ },
+ "challenge": "2538b5feb295875b"
+}
