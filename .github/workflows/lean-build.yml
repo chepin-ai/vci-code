@@ -1,0 +1,119 @@
+name: lean-build
+# 公域事件驱动编译通道（不消耗私域CI额度，无定时触发）：
+# 私域 ETCS-Formalization 推送 → sandbox/API 发 repository_dispatch → 本工作流编译 → 回执+检查点落私域
+on:
+  repository_dispatch:
+    types: [lean-build]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'branch in ETCS-Formalization'
+        required: true
+        default: 'lean-4'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: chepin-ai/ETCS-Formalization
+          ref: ${{ github.event.client_payload.ref || github.event.inputs.ref }}
+          token: ${{ secrets.CI_HUB_TOKEN }}
+          path: src
+
+      - name: install elan toolchain
+        run: |
+          curl -sSf https://elan.lean-lang.org/elan-init.sh | sh -s -- -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: toolchain version
+        run: lean --version
+
+      - name: lake build
+        run: |
+          cd src
+          set -o pipefail
+          lake build 2>&1 | tee ../build.log
+
+      - name: sorry census
+        if: always()
+        run: |
+          cd src
+          grep -rn "sorry" ETCS/*.lean > ../sorry.txt || true
+
+      - name: report-back (receipt to vci-code + check-run to private repo)
+        if: always()
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+          INPUT_REF: ${{ github.event.inputs.ref }}
+          GH_TOKEN: ${{ secrets.CI_HUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_OK: ${{ job.status }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, datetime, hashlib, subprocess, urllib.request
+          pl = json.loads(os.environ.get('PAYLOAD','{}') or '{}')
+          ref = pl.get('ref') or os.environ.get('INPUT_REF') or 'lean-4'
+          ts = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          build_log = open('build.log', errors='replace').read() if os.path.exists('build.log') else ''
+          sorry_lines = open('sorry.txt', errors='replace').read() if os.path.exists('sorry.txt') else ''
+          status = os.environ.get('BUILD_OK','')
+          rec = {
+            'ts': ts, 'event': 'lean-build', 'repo': 'chepin-ai/ETCS-Formalization',
+            'ref': ref, 'status': status,
+            'errors': [l for l in build_log.splitlines() if 'error' in l][:50],
+            'sorry': [l for l in sorry_lines.splitlines() if l.strip()][:50],
+            'challenge': hashlib.sha256((json.dumps(pl,sort_keys=True)+ts).encode()).hexdigest()[:16],
+          }
+          os.makedirs('bridge/lean-build', exist_ok=True)
+          fn = 'bridge/lean-build/' + ts.replace(':','').replace('-','') + '.json'
+          open(fn,'w').write(json.dumps(rec, ensure_ascii=False, indent=1))
+          subprocess.run(['git','config','user.name','lean-build'], check=True)
+          subprocess.run(['git','config','user.email','lean-build@ci-root.local'], check=True)
+          subprocess.run(['git','add',fn], check=True)
+          subprocess.run(['git','commit','-q','-m','lean-build receipt '+ts], check=False)
+          for i in range(3):
+              subprocess.run(['git','pull','--rebase','-q','origin','main'], check=False)
+              r = subprocess.run(['git','push','-q'], check=False)
+              if r.returncode == 0: break
+          # check-run on the private repo commit
+          sha = pl.get('sha')
+          if not sha:
+              req = urllib.request.Request(
+                'https://api.github.com/repos/chepin-ai/ETCS-Formalization/commits/'+ref,
+                headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],
+                         'Accept':'application/vnd.github+json'})
+              sha = json.load(urllib.request.urlopen(req))['sha']
+          req = urllib.request.Request(
+            'https://api.github.com/repos/chepin-ai/ETCS-Formalization/check-runs',
+            data=json.dumps({
+              'name':'lean-build (public channel)',
+              'head_sha': sha,
+              'status':'completed',
+              'conclusion': 'success' if status=='success' else 'failure',
+              'output': {'title':'lean-build via vci-code','summary':
+                ('✅ lake build passed\n\n' if status=='success' else '❌ build failed\n```\n'+('\n'.join(rec['errors']) or 'see build.log')+'\n```\n')+
+                '**sorry census**: '+str(len(rec['sorry']))+' item(s)'}
+            }).encode(),
+            headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],
+                     'Accept':'application/vnd.github+json'})
+          try:
+              urllib.request.urlopen(req)
+              print('check-run created on', sha[:9])
+          except Exception as e:
+              print('check-run failed:', e)
+          print(json.dumps(rec, ensure_ascii=False)[:300])
+          PYEOF
+
+      - name: upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-build-log
+          path: |
+            build.log
+            sorry.txt
