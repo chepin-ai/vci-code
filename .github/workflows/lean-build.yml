@@ -55,7 +55,7 @@ jobs:
           BUILD_OK: ${{ job.status }}
         run: |
           python3 - <<'PYEOF'
-          import json, os, datetime, hashlib, subprocess, urllib.request
+          import json, os, datetime, hashlib, subprocess, urllib.request, sys
           pl = json.loads(os.environ.get('PAYLOAD','{}') or '{}')
           ref = pl.get('ref') or os.environ.get('INPUT_REF') or 'lean-4'
           ts = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -100,13 +100,15 @@ jobs:
                 '**sorry census**: '+str(len(rec['sorry']))+' item(s)'}
             }).encode(),
             headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],
-                     'Accept':'application/vnd.github+json'})
+                     'Accept':'application/vnd.github+json',
+                     'Content-Type':'application/json'})
           try:
               urllib.request.urlopen(req)
               print('check-run created on', sha[:9])
           except Exception as e:
               print('check-run failed:', e)
           print(json.dumps(rec, ensure_ascii=False)[:300])
+          sys.exit(0)
           PYEOF
 
       - name: upload build log
